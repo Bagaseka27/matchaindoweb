@@ -9,15 +9,15 @@ use Illuminate\Http\Request;
 
 class MenuController extends Controller
 {
-    // GET /api/menus?search=latte&category=Coffee&available=1
+    // GET /api/menus?search=latte&kategori=Coffee&aktif=1
     public function index(Request $request)
     {
         $menus = Menu::query()
-            ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%"))
-            ->when($request->category, fn ($q, $c) => $q->where('category', $c))
-            ->when($request->boolean('available'), fn ($q) => $q->where('is_available', true))
-            ->orderBy('category')
-            ->orderBy('name')
+            ->when($request->search, fn ($q, $s) => $q->where('nama_menu', 'like', "%{$s}%"))
+            ->when($request->kategori, fn ($q, $k) => $q->where('kategori', $k))
+            ->when($request->boolean('aktif'), fn ($q) => $q->where('is_aktif', true))
+            ->orderBy('kategori')
+            ->orderBy('nama_menu')
             ->get();
 
         return MenuResource::collection($menus); // dibungkus {"data": [...]}
@@ -29,4 +29,3 @@ class MenuController extends Controller
         return new MenuResource($menu);
     }
 }
-

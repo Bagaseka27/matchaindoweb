@@ -10,13 +10,10 @@ class MenuResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'           => $this->id,
-            'name'         => $this->name,
-            'category'     => $this->category,
-            'description'  => $this->description,
-            'price'        => $this->price,
-            'image_url'    => $this->image_url,
-            'is_available' => $this->is_available,
+            'id_menu'   => $this->id_menu,
+            'nama_menu' => $this->nama_menu,
+            'kategori'  => $this->kategori,
+            'is_aktif'  => $this->is_aktif,
         ];
     }
 }

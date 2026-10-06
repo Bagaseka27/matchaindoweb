@@ -4,27 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\Menu;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class MenuController extends Controller
 {
     private function rules(): array
     {
         return [
-            'name'         => 'required|string|max:100',
-            'category'     => 'required|string|max:50',
-            'description'  => 'nullable|string|max:500',
-            'price'        => 'required|integer|min:0',
-            'image'        => 'nullable|image|max:2048',
-            'is_available' => 'nullable|boolean',
+            'nama_menu' => 'required|string|max:100',
+            'kategori'  => 'required|string|max:50',
+            'is_aktif'  => 'nullable|boolean',
         ];
     }
 
     public function index(Request $request)
     {
         $menus = Menu::query()
-            ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%"))
-            ->latest()
+            ->when($request->search, fn ($q, $s) => $q->where('nama_menu', 'like', "%{$s}%"))
+            ->orderBy('kategori')
+            ->orderBy('nama_menu')
             ->paginate(10)
             ->withQueryString();
 
@@ -39,11 +36,7 @@ class MenuController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate($this->rules());
-        $data['is_available'] = $request->boolean('is_available');
-
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('menus', 'public');
-        }
+        $data['is_aktif'] = $request->boolean('is_aktif');
 
         Menu::create($data);
 
@@ -58,14 +51,7 @@ class MenuController extends Controller
     public function update(Request $request, Menu $menu)
     {
         $data = $request->validate($this->rules());
-        $data['is_available'] = $request->boolean('is_available');
-
-        if ($request->hasFile('image')) {
-            if ($menu->image) {
-                Storage::disk('public')->delete($menu->image);
-            }
-            $data['image'] = $request->file('image')->store('menus', 'public');
-        }
+        $data['is_aktif'] = $request->boolean('is_aktif');
 
         $menu->update($data);
 
@@ -74,9 +60,6 @@ class MenuController extends Controller
 
     public function destroy(Menu $menu)
     {
-        if ($menu->image) {
-            Storage::disk('public')->delete($menu->image);
-        }
         $menu->delete();
 
         return redirect()->route('menus.index')->with('success', 'Menu berhasil dihapus.');
