@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthWebController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\CabangController;
 
 // Booting Awal
 Route::get('/', function () {
@@ -29,3 +30,21 @@ Route::middleware('auth')->group(function () {
     // CRUD Menu
     Route::resource('menus', MenuController::class)->except('show');
 });
+
+Route::resource('cabang', CabangController::class);
+
+Route::get('/cabang/{id}/shift', 
+    [CabangController::class, 'shift'])
+    ->name('cabang.shift');
+
+Route::post('/cabang/{id}/shift',
+    [CabangController::class, 'storeShift'])
+    ->name('cabang.shift.store');
+
+Route::put('/shift/{id}',
+    [CabangController::class, 'updateShift'])
+    ->name('shift.update');
+
+Route::delete('/shift/{id}',
+    [CabangController::class, 'deleteShift'])
+    ->name('shift.delete');

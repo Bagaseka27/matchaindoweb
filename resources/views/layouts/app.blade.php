@@ -20,7 +20,7 @@
             <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">🔄 Rekonsiliasi QRIS</a>
             <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">📦 Kelola Data Master</a>
             <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">📊 Kelola Stok</a>
-            <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">🏪 Kelola Cabang</a>
+            <a href="{{ route('cabang.index') }}" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">🏪 Kelola Cabang</a>
             <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">📈 Laporan</a>
         </nav>
         <div class="p-4 border-t border-green-700">
