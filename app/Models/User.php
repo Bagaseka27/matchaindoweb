@@ -26,4 +26,9 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
     ];
+
+    public function cabang()
+    {
+        return $this->belongsTo(Cabang::class, 'id_cabang', 'id_cabang');
+    }
 }

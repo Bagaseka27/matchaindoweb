@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Cabang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -10,14 +11,16 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::all();
+        $users = User::with('cabang')->get();
 
         return view('user.index', compact('users'));
     }
 
     public function create()
     {
-        return view('user.create');
+        $cabangs = Cabang::all();
+
+        return view('user.create', compact('cabangs'));
     }
 
     public function store(Request $request)
@@ -26,12 +29,14 @@ class UserController extends Controller
             'nama' => 'required|string|max:100',
             'username' => 'required|string|max:100|unique:pengguna,username',
             'password' => 'required|min:6',
-            'role' => 'required',
-            'tarif_harian' => 'nullable|numeric',
+            'id_cabang' => 'required',
+            'role' => 'required|in:pemilik,barista',
+            'tarif_harian' => 'nullable|numeric|min:0',
             'is_aktif' => 'required|boolean',
         ]);
 
         User::create([
+            'id_cabang' => $request->id_cabang,
             'nama' => $request->nama,
             'username' => $request->username,
             'password' => Hash::make($request->password),
@@ -42,14 +47,15 @@ class UserController extends Controller
 
         return redirect()
             ->route('user.index')
-            ->with('success', 'User berhasil ditambahkan.');
+            ->with('success', 'Pengguna berhasil ditambahkan.');
     }
 
     public function edit($id)
     {
         $user = User::findOrFail($id);
+        $cabangs = Cabang::all();
 
-        return view('user.edit', compact('user'));
+        return view('user.edit', compact('user', 'cabangs'));
     }
 
     public function update(Request $request, $id)
@@ -60,12 +66,14 @@ class UserController extends Controller
             'nama' => 'required|string|max:100',
             'username' => 'required|string|max:100|unique:pengguna,username,' . $id . ',id_user',
             'password' => 'nullable|min:6',
-            'role' => 'required',
-            'tarif_harian' => 'nullable|numeric',
+            'id_cabang' => 'required',
+            'role' => 'required|in:pemilik,barista',
+            'tarif_harian' => 'nullable|numeric|min:0',
             'is_aktif' => 'required|boolean',
         ]);
 
         $data = [
+            'id_cabang' => $request->id_cabang,
             'nama' => $request->nama,
             'username' => $request->username,
             'role' => $request->role,
@@ -81,7 +89,7 @@ class UserController extends Controller
 
         return redirect()
             ->route('user.index')
-            ->with('success', 'User berhasil diperbarui.');
+            ->with('success', 'Pengguna berhasil diperbarui.');
     }
 
     public function destroy($id)
@@ -92,6 +100,6 @@ class UserController extends Controller
 
         return redirect()
             ->route('user.index')
-            ->with('success', 'User berhasil dihapus.');
+            ->with('success', 'Pengguna berhasil dihapus.');
     }
 }
