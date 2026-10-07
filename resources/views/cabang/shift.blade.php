@@ -48,14 +48,14 @@
                 <div>
 
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Nama Shift
+                        Nama Barista
                     </label>
 
 
                     <input
                     type="text"
                     name="nama_shift"
-                    placeholder="Contoh: Shift Pagi"
+                    placeholder="Contoh: Nana"
                     class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-700">
 
 
@@ -156,7 +156,7 @@
 
 
                     <th class="px-6 py-4">
-                        Nama Shift
+                        Nama Barista
                     </th>
 
 
