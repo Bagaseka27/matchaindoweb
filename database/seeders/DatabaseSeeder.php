@@ -11,9 +11,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Panggil seeder yang sudah kita sesuaikan dengan ERD
         $this->call([
             PenggunaSeeder::class,
+            MasterDataSeeder::class,
         ]);
     }
 }

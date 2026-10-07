@@ -5,7 +5,9 @@ use App\Http\Controllers\AuthWebController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\CabangController;
-use App\Http\Controllers\UserController;;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\KategoriController;
+use App\Http\Controllers\JenisCupController;
 
 // Booting Awal
 Route::get('/', function () {
@@ -30,6 +32,8 @@ Route::middleware('auth')->group(function () {
 
     // CRUD Menu
     Route::resource('menus', MenuController::class)->except('show');
+    Route::resource('kategori', KategoriController::class)->except('show');
+    Route::resource('jenis-cup', JenisCupController::class)->except('show');
 });
 
 Route::resource('cabang', CabangController::class);
