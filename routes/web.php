@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthWebController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\CabangController;
+use App\Http\Controllers\UserController;;
 
 // Booting Awal
 Route::get('/', function () {
@@ -48,3 +49,5 @@ Route::put('/shift/{id}',
 Route::delete('/shift/{id}',
     [CabangController::class, 'deleteShift'])
     ->name('shift.delete');
+
+Route::resource('user', UserController::class);

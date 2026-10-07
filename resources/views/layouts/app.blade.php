@@ -15,6 +15,11 @@
             <p class="text-xs text-green-200">INDONESIA</p>
         </div>
         <nav class="flex-1 px-4 py-6 space-y-2">
+                        <a href="{{ route('user.index') }}"
+            class="flex items-center gap-3 px-5 py-3 rounded-lg
+            {{ request()->routeIs('user.*') ? 'bg-white text-green-900 font-semibold' : 'text-white hover:bg-green-700' }}">
+                👤 Pengguna
+            </a>
             <a href="{{ route('dashboard') }}" class="block px-4 py-2 bg-[#F3F4F6] text-[#2F593E] rounded-lg font-semibold">🏠 Dashboard</a>
             <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">🧾 Kelola Transaksi</a>
             <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">🔄 Rekonsiliasi QRIS</a>
@@ -22,6 +27,7 @@
             <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">📊 Kelola Stok</a>
             <a href="{{ route('cabang.index') }}" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">🏪 Kelola Cabang</a>
             <a href="#" class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">📈 Laporan</a>
+            
         </nav>
         <div class="p-4 border-t border-green-700">
             <form action="{{ route('logout') }}" method="POST">
