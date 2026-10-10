@@ -90,7 +90,7 @@
 
                     <a href="{{ route('menus.index') }}"
                        class="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition
-                       {{ request()->routeIs('menu.*')
+                       {{ request()->routeIs('menus.*')
                             ? 'bg-gray-100 font-semibold text-green-900'
                             : '' }}">
 
@@ -112,7 +112,7 @@
 
                     <a href="{{ route('jenis-cup.index') }}"
                        class="block px-4 py-3 text-gray-700 hover:bg-gray-100 transition
-                       {{ request()->routeIs('variasi.*')
+                       {{ request()->routeIs('jenis-cup.*')
                             ? 'bg-gray-100 font-semibold text-green-900'
                             : '' }}">
 
@@ -125,9 +125,11 @@
             </details>
 
 
-            <a href="#"
-               class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">
-
+            <a href="{{ route('stok.index') }}"
+                class="block px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('stok.*')
+                        ? 'bg-white text-green-900 font-semibold'
+                        : 'text-white hover:bg-green-700' }}">
                 📊 Kelola Stok
 
             </a>

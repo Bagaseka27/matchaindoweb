@@ -1,57 +1,78 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthWebController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\MenuController;
 use App\Http\Controllers\CabangController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\KategoriController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JenisCupController;
+use App\Http\Controllers\KategoriController;
+use App\Http\Controllers\MenuController;
+use App\Http\Controllers\StokController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Route;
 
-// Booting Awal
-Route::get('/', function () {
-    return view('booting', ['redirect_url' => route('login.form'), 'message' => 'Memuat Sistem Matcha Indonesia...']);
-})->name('booting.awal');
+/*
+|--------------------------------------------------------------------------
+| Booting Awal
+|--------------------------------------------------------------------------
+*/
+Route::get('/', fn () => view('booting', [
+    'redirect_url' => route('login.form'),
+    'message'      => 'Memuat Sistem Matcha Indonesia...',
+]))->name('booting.awal');
 
-// Auth Routes (Guest)
+/*
+|--------------------------------------------------------------------------
+| Auth (Guest)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthWebController::class, 'showLoginForm'])->name('login.form');
     Route::post('/login', [AuthWebController::class, 'login'])->name('login.post');
 });
 
-// Protected Routes (Hanya untuk Owner yang sudah login)
+/*
+|--------------------------------------------------------------------------
+| Protected Routes (Owner yang sudah login)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth')->group(function () {
-    // Booting Transisi ke Dashboard
-    Route::get('/booting-dashboard', function () {
-        return view('booting', ['redirect_url' => route('dashboard'), 'message' => 'Menyiapkan Dashboard Konsolidasi...']);
-    })->name('booting.dashboard');
+
+    // Booting transisi & dashboard
+    Route::get('/booting-dashboard', fn () => view('booting', [
+        'redirect_url' => route('dashboard'),
+        'message'      => 'Menyiapkan Dashboard Konsolidasi...',
+    ]))->name('booting.dashboard');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/logout', [AuthWebController::class, 'logout'])->name('logout');
 
-    // CRUD Menu
+    // Data master
     Route::resource('menus', MenuController::class)->except('show');
     Route::resource('kategori', KategoriController::class)->except('show');
     Route::resource('jenis-cup', JenisCupController::class)->except('show');
+
+    // Cabang & shift
+    Route::resource('cabang', CabangController::class);
+
+    Route::prefix('cabang/{id}/shift')->name('cabang.shift')->group(function () {
+        Route::get('/', [CabangController::class, 'shift']);
+        Route::post('/', [CabangController::class, 'storeShift'])->name('.store');
+    });
+
+    Route::put('/shift/{id}', [CabangController::class, 'updateShift'])->name('shift.update');
+    Route::delete('/shift/{id}', [CabangController::class, 'deleteShift'])->name('shift.delete');
+
+    // User
+    Route::resource('user', UserController::class);
+
+    // Manajemen stok terpusat
+    Route::prefix('stok')->name('stok.')->group(function () {
+        Route::get('/', [StokController::class, 'index'])->name('index');
+        Route::get('/create', [StokController::class, 'create'])->name('create');
+        Route::post('/', [StokController::class, 'store'])->name('store');
+
+        Route::get('/{cabang}/{bahan}/edit', [StokController::class, 'edit'])->name('edit');
+        Route::put('/{cabang}/{bahan}', [StokController::class, 'update'])->name('update');
+        Route::delete('/{cabang}/{bahan}', [StokController::class, 'destroy'])->name('destroy');
+    })->whereNumber(['cabang', 'bahan']);
 });
-
-Route::resource('cabang', CabangController::class);
-
-Route::get('/cabang/{id}/shift', 
-    [CabangController::class, 'shift'])
-    ->name('cabang.shift');
-
-Route::post('/cabang/{id}/shift',
-    [CabangController::class, 'storeShift'])
-    ->name('cabang.shift.store');
-
-Route::put('/shift/{id}',
-    [CabangController::class, 'updateShift'])
-    ->name('shift.update');
-
-Route::delete('/shift/{id}',
-    [CabangController::class, 'deleteShift'])
-    ->name('shift.delete');
-
-Route::resource('user', UserController::class);
