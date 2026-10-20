@@ -10,6 +10,61 @@ use Illuminate\Validation\ValidationException;
 
 class TransaksiController extends Controller
 {
+    public function history(Request $request)
+    {
+        $user = $request->user();
+        abort_unless(in_array($user->role, ['barista', 'pemilik'], true), 403);
+
+        $idCabang = $user->role === 'barista'
+            ? $user->id_cabang
+            : ($user->id_cabang ?? $request->query('cabang'));
+        if (! $idCabang) {
+            throw ValidationException::withMessages([
+                'id_cabang' => 'Cabang harus dipilih untuk melihat riwayat transaksi.',
+            ]);
+        }
+
+        $transaksi = DB::table('transaksi')
+            ->where('id_cabang', $idCabang)
+            ->orderByDesc('waktu_transaksi')
+            ->limit(100)
+            ->get();
+
+        $itemsByTransaction = DB::table('detail_transaksi')
+            ->join('menu', 'menu.id_menu', '=', 'detail_transaksi.id_menu')
+            ->join('jenis_cup', 'jenis_cup.id_cup', '=', 'detail_transaksi.id_cup')
+            ->whereIn('detail_transaksi.id_transaksi', $transaksi->pluck('id_transaksi'))
+            ->select(
+                'detail_transaksi.id_transaksi',
+                'menu.nama_menu',
+                'jenis_cup.nama_cup',
+                'detail_transaksi.jumlah',
+                'detail_transaksi.harga_satuan',
+                'detail_transaksi.subtotal'
+            )
+            ->get()
+            ->groupBy('id_transaksi');
+
+        return response()->json([
+            'data' => $transaksi->map(fn ($row) => [
+                'id_transaksi' => (int) $row->id_transaksi,
+                'urutan_pelanggan' => (int) $row->urutan_pelanggan,
+                'waktu_transaksi' => $row->waktu_transaksi,
+                'total_bayar' => (float) $row->total_bayar,
+                'metode_bayar' => $row->metode_bayar,
+                'items' => $itemsByTransaction->get($row->id_transaksi, collect())
+                    ->map(fn ($item) => [
+                        'nama_menu' => $item->nama_menu,
+                        'nama_cup' => $item->nama_cup,
+                        'jumlah' => (int) $item->jumlah,
+                        'harga_satuan' => (float) $item->harga_satuan,
+                        'subtotal' => (float) $item->subtotal,
+                    ])
+                    ->values(),
+            ])->values(),
+        ]);
+    }
+
     public function checkout(Request $request)
     {
         $data = $request->validate([

@@ -12,7 +12,9 @@ class MenuResource extends JsonResource
         return [
             'id_menu'   => $this->id_menu,
             'nama_menu' => $this->nama_menu,
-            'kategori'  => $this->kategori,
+            'kategori'  => $this->resource->relationLoaded('kategori')
+                ? $this->resource->getRelation('kategori')?->nama_kategori
+                : $this->resource->getAttribute('kategori'),
             'is_aktif'  => $this->is_aktif,
             'harga' => $this->whenLoaded('hargaMenus', fn () => $this->hargaMenus
                 ->map(fn ($harga) => [

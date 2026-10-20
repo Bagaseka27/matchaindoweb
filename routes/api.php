@@ -38,5 +38,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stok/cup', [StokController::class, 'cup']);
 
     // POS
+    Route::get('/transaksi/riwayat', [TransaksiController::class, 'history']);
     Route::post('/transaksi/checkout', [TransaksiController::class, 'checkout']);
 });

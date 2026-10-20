@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -165,6 +166,77 @@ class ApiCupStockCheckoutTest extends TestCase
             ->assertJsonPath('data.0.id_menu', $idMenu)
             ->assertJsonPath('data.0.harga.0.id_cup', $idCup)
             ->assertJsonPath('data.0.harga.0.harga', 18000);
+    }
+
+    public function test_menu_endpoint_uses_category_relation_from_imported_schema(): void
+    {
+        [$user, , $idMenu, $idCup] = $this->createFixture(8);
+        Schema::create('kategori', function ($table) {
+            $table->id('id_kategori');
+            $table->string('nama_kategori');
+            $table->boolean('is_aktif')->default(true);
+            $table->timestamps();
+        });
+        Schema::table('menu', function ($table) {
+            $table->unsignedBigInteger('id_kategori')->nullable();
+        });
+        $idKategori = DB::table('kategori')->insertGetId([
+            'nama_kategori' => 'Minuman',
+            'is_aktif' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('menu')->where('id_menu', $idMenu)->update(['id_kategori' => $idKategori]);
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/menus?kategori=Minuman')
+            ->assertOk()
+            ->assertJsonPath('data.0.id_menu', $idMenu)
+            ->assertJsonPath('data.0.kategori', 'Minuman')
+            ->assertJsonPath('data.0.harga.0.id_cup', $idCup);
+    }
+
+    public function test_barista_transaction_history_is_limited_to_their_branch(): void
+    {
+        [$user, $idCabang, $idMenu, $idCup] = $this->createFixture(8);
+        $idCabangLain = DB::table('cabang')->insertGetId([
+            'nama_cabang' => 'Cabang Riwayat Lain',
+            'alamat' => 'Alamat',
+            'is_aktif' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $makeTransaction = fn (int $branchId) => DB::table('transaksi')->insertGetId([
+            'id_cabang' => $branchId,
+            'id_user' => $user->id_user,
+            'urutan_pelanggan' => 1,
+            'waktu_transaksi' => now(),
+            'total_bayar' => 18000,
+            'metode_bayar' => 'qris',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $ownTransaction = $makeTransaction($idCabang);
+        $makeTransaction($idCabangLain);
+        DB::table('detail_transaksi')->insert([
+            'id_transaksi' => $ownTransaction,
+            'id_menu' => $idMenu,
+            'id_cup' => $idCup,
+            'jumlah' => 1,
+            'harga_satuan' => 18000,
+            'subtotal' => 18000,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/transaksi/riwayat')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id_transaksi', $ownTransaction)
+            ->assertJsonPath('data.0.metode_bayar', 'qris')
+            ->assertJsonPath('data.0.items.0.nama_menu', 'Matcha Latte')
+            ->assertJsonPath('data.0.items.0.nama_cup', 'Medium');
     }
 
     private function createFixture(int $jumlahStok): array

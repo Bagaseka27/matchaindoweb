@@ -50,6 +50,7 @@ We would like to extend our thanks to the following sponsors for funding Laravel
 Endpoint berikut membutuhkan token Sanctum melalui header `Authorization: Bearer <token>`.
 
 - `GET /api/stok/cup` menampilkan stok cup cabang pengguna. Pemilik tanpa cabang dapat memilih cabang melalui `?cabang=<id_cabang>`. Stok cup yang belum dicatat ditampilkan sebagai `0`.
+- `GET /api/transaksi/riwayat` menampilkan maksimal 100 transaksi terbaru beserta detail item pada cabang pengguna. Barista hanya dapat melihat cabangnya.
 - `POST /api/transaksi/checkout` menyimpan transaksi, detail item, mutasi pemakaian cup, dan pengurangan stok dalam satu transaksi database.
 
 Contoh checkout:
