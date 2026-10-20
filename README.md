@@ -42,6 +42,30 @@ We would like to extend our thanks to the following sponsors for funding Laravel
 - **[Redberry](https://redberry.international/laravel-development)**
 - **[Active Logic](https://activelogic.com)**
 
+## API POS dan Stok Cup
+
+- `GET /api/menus` menyertakan daftar harga per ukuran cup (`harga`) untuk katalog kasir mobile.
+- Dashboard menyediakan `/stok-cup` untuk monitoring seluruh cabang, restock, dan rekap mutasi; `/transaksi` menampilkan transaksi penjualan Barista.
+
+Endpoint berikut membutuhkan token Sanctum melalui header `Authorization: Bearer <token>`.
+
+- `GET /api/stok/cup` menampilkan stok cup cabang pengguna. Pemilik tanpa cabang dapat memilih cabang melalui `?cabang=<id_cabang>`. Stok cup yang belum dicatat ditampilkan sebagai `0`.
+- `POST /api/transaksi/checkout` menyimpan transaksi, detail item, mutasi pemakaian cup, dan pengurangan stok dalam satu transaksi database.
+
+Contoh checkout:
+
+```json
+{
+  "items": [
+    { "id_menu": 1, "id_cup": 2, "jumlah": 2 }
+  ],
+  "metode_bayar": "tunai",
+  "uang_diterima": 50000
+}
+```
+
+Gunakan `metode_bayar: "qris"` untuk pembayaran QRIS; `uang_diterima` tidak diperlukan. Harga dihitung dari `harga_menu`, bukan dari input client. Item dengan cup berukuran `0 ml` tidak mengurangi stok cup. Checkout mengembalikan `201` saat berhasil dan `422` jika pilihan harga tidak tersedia, pembayaran tunai kurang, atau stok cup tidak mencukupi. Stok cup disimpan per cabang dan jenis cup pada tabel `stok_cup`, sedangkan perubahannya dicatat pada `mutasi_cup`.
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).

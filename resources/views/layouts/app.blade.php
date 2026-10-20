@@ -48,8 +48,8 @@
             </a>
 
 
-            <a href="#"
-               class="block px-4 py-2 hover:bg-green-700 rounded-lg transition">
+            <a href="{{ route('transaksi.index') }}"
+               class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('transaksi.*') ? 'bg-white text-green-900 font-semibold' : 'text-white hover:bg-green-700' }}">
 
                 🧾 Kelola Transaksi
 
@@ -132,6 +132,11 @@
                         : 'text-white hover:bg-green-700' }}">
                 📊 Kelola Stok
 
+            </a>
+
+            <a href="{{ route('stok-cup.index') }}"
+               class="block px-4 py-2 rounded-lg transition {{ request()->routeIs('stok-cup.*') ? 'bg-white text-green-900 font-semibold' : 'text-white hover:bg-green-700' }}">
+                🥤 Stok Cup & Mutasi
             </a>
 
 

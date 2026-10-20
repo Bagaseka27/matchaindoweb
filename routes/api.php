@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\StokController;
+use App\Http\Controllers\Api\TransaksiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -25,7 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user-profile', fn (Request $request) => response()->json([
         'status' => true,
-        'data'   => $request->user(),
+        'data' => $request->user(),
     ]));
 
     // Menu (read-only untuk barista)
@@ -34,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Stok
     Route::get('/stok', [StokController::class, 'index']);
+    Route::get('/stok/cup', [StokController::class, 'cup']);
 
-    // Nanti endpoint transaksi kasir ditaruh di sini
+    // POS
+    Route::post('/transaksi/checkout', [TransaksiController::class, 'checkout']);
 });

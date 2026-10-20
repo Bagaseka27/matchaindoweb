@@ -14,6 +14,14 @@ class MenuResource extends JsonResource
             'nama_menu' => $this->nama_menu,
             'kategori'  => $this->kategori,
             'is_aktif'  => $this->is_aktif,
+            'harga' => $this->whenLoaded('hargaMenus', fn () => $this->hargaMenus
+                ->map(fn ($harga) => [
+                    'id_cup' => $harga->id_cup,
+                    'nama_cup' => $harga->jenisCup?->nama_cup,
+                    'volume_ml' => $harga->jenisCup?->volume_ml,
+                    'harga' => (float) $harga->harga,
+                ])
+                ->values()),
         ];
     }
 }

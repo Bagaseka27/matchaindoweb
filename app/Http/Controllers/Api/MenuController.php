@@ -13,6 +13,7 @@ class MenuController extends Controller
     public function index(Request $request)
     {
         $menus = Menu::query()
+            ->with(['hargaMenus.jenisCup'])
             ->when($request->search, fn ($q, $s) => $q->where('nama_menu', 'like', "%{$s}%"))
             ->when($request->kategori, fn ($q, $k) => $q->where('kategori', $k))
             ->when($request->boolean('aktif'), fn ($q) => $q->where('is_aktif', true))
@@ -26,6 +27,8 @@ class MenuController extends Controller
     // GET /api/menus/{menu}
     public function show(Menu $menu)
     {
+        $menu->load('hargaMenus.jenisCup');
+
         return new MenuResource($menu);
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthWebController;
 use App\Http\Controllers\CabangController;
+use App\Http\Controllers\CupStockController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JenisCupController;
 use App\Http\Controllers\KategoriController;
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function () {
     ]))->name('booting.dashboard');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/transaksi', [CupStockController::class, 'transactions'])->name('transaksi.index');
     Route::post('/logout', [AuthWebController::class, 'logout'])->name('logout');
 
     // Data master
@@ -79,6 +81,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('user', UserController::class);
 
     // Manajemen stok terpusat
+    Route::get('/stok-cup', [CupStockController::class, 'index'])->name('stok-cup.index');
+    Route::post('/stok-cup/restock', [CupStockController::class, 'restock'])->name('stok-cup.restock');
+
     Route::prefix('stok')->name('stok.')->group(function () {
         Route::get('/', [StokController::class, 'index'])->name('index');
         Route::get('/create', [StokController::class, 'create'])->name('create');
