@@ -62,6 +62,19 @@ Route::middleware('auth')->group(function () {
     Route::put('/shift/{id}', [CabangController::class, 'updateShift'])->name('shift.update');
     Route::delete('/shift/{id}', [CabangController::class, 'deleteShift'])->name('shift.delete');
 
+    // Kelola Shift terpisah
+    Route::get('/shift', [CabangController::class, 'indexShift'])
+        ->name('shift.index');
+
+    Route::post('/shift', [CabangController::class, 'storeShiftGlobal'])
+        ->name('shift.store');
+
+    Route::put('/shift/{id}', [CabangController::class, 'updateShift'])
+        ->name('shift.update');
+
+    Route::delete('/shift/{id}', [CabangController::class, 'deleteShift'])
+        ->name('shift.delete');
+
     // User
     Route::resource('user', UserController::class);
 
@@ -75,4 +88,14 @@ Route::middleware('auth')->group(function () {
         Route::put('/{cabang}/{bahan}', [StokController::class, 'update'])->name('update');
         Route::delete('/{cabang}/{bahan}', [StokController::class, 'destroy'])->name('destroy');
     })->whereNumber(['cabang', 'bahan']);
+
+    // Jadwal kerja barista
+    Route::post('/jadwal-shift', [CabangController::class, 'storeJadwalShift'])
+        ->name('jadwal-shift.store');
+
+    Route::put('/jadwal-shift/{id}', [CabangController::class, 'updateJadwalShift'])
+        ->name('jadwal-shift.update');
+
+    Route::delete('/jadwal-shift/{id}', [CabangController::class, 'deleteJadwalShift'])
+        ->name('jadwal-shift.delete');
 });

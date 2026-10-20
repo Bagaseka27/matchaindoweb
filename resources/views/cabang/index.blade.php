@@ -158,14 +158,6 @@
 
 
 
-                    <a href="{{ route('cabang.shift',$cabang->id_cabang) }}"
-                    class="inline-flex items-center justify-center gap-1 w-20 py-2 bg-[#2F593E] text-white rounded-lg text-sm font-medium hover:bg-green-800 transition">
-
-                        Shift
-
-                    </a>
-
-
                 </div>
 
 
