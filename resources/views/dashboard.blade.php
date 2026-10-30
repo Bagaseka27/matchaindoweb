@@ -7,19 +7,25 @@
     <!-- Card 1 -->
     <div class="bg-white p-6 rounded-lg shadow-sm border-t-4 border-[#2F593E]">
         <h3 class="text-gray-500 text-sm font-semibold mb-2">Total Pendapatan Hari Ini</h3>
-        <p class="text-3xl font-bold text-gray-800">Rp 0</p>
+        <p class="text-3xl font-bold text-gray-800">
+            Rp {{ number_format($totalPendapatan, 0, ',', '.') }}
+        </p>
     </div>
     
     <!-- Card 2 -->
     <div class="bg-white p-6 rounded-lg shadow-sm border-t-4 border-[#2F593E]">
         <h3 class="text-gray-500 text-sm font-semibold mb-2">Total Transaksi Hari Ini</h3>
-        <p class="text-3xl font-bold text-gray-800">0 Transaksi</p>
+        <p class="text-3xl font-bold text-gray-800">
+        {{ $totalTransaksi }} Transaksi
+        </p>
     </div>
 
     <!-- Card 3 -->
     <div class="bg-white p-6 rounded-lg shadow-sm border-t-4 border-[#2F593E]">
         <h3 class="text-gray-500 text-sm font-semibold mb-2">Cabang Teramai Hari Ini</h3>
-        <p class="text-xl font-bold text-gray-800">-</p>
+        <p class="text-xl font-bold text-gray-800">
+            {{ $cabangTeramai->nama_cabang ?? '-' }}
+        </p>
     </div>
 </div>
 

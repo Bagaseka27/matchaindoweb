@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthWebController;
 use App\Http\Controllers\CabangController;
 use App\Http\Controllers\CupStockController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RekonsiliasiController;
 use App\Http\Controllers\JenisCupController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\MenuController;
@@ -46,6 +47,13 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/transaksi', [CupStockController::class, 'transactions'])->name('transaksi.index');
+    
+    Route::get('/rekonsiliasi-qris', [RekonsiliasiController::class, 'index'])
+        ->name('rekonsiliasi.index');
+
+    Route::post('/rekonsiliasi-qris', [RekonsiliasiController::class, 'store'])
+        ->name('rekonsiliasi.store');
+
     Route::post('/logout', [AuthWebController::class, 'logout'])->name('logout');
 
     // Data master
