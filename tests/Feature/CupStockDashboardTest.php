@@ -126,4 +126,45 @@ class CupStockDashboardTest extends TestCase
             ->assertSee('Matcha Test')
             ->assertSee('qris');
     }
+
+    public function test_dashboard_includes_regular_non_cup_in_stock_monitoring_and_allows_restock(): void
+    {
+        $idCabang = DB::table('cabang')->insertGetId([
+            'nama_cabang' => 'Cabang Test Non-Cup',
+            'alamat' => 'Alamat',
+            'is_aktif' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $idCup = DB::table('jenis_cup')->insertGetId([
+            'nama_cup' => 'Tanpa Cup / Regular',
+            'volume_ml' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $owner = User::create([
+            'nama' => 'Pemilik Test',
+            'username' => 'pemilik-noncup-test',
+            'password' => 'password',
+            'role' => 'pemilik',
+            'is_aktif' => true,
+        ]);
+        $this->actingAs($owner);
+
+        $this->get(route('stok-cup.index'))
+            ->assertOk()
+            ->assertSee('Tanpa Cup / Regular');
+
+        $this->post(route('stok-cup.restock'), [
+            'id_cabang' => $idCabang,
+            'id_cup' => $idCup,
+            'jumlah' => 10,
+        ])->assertRedirect(route('stok-cup.index'));
+
+        $this->assertDatabaseHas('stok_cup', [
+            'id_cabang' => $idCabang,
+            'id_cup' => $idCup,
+            'jumlah_stok' => 10,
+        ]);
+    }
 }

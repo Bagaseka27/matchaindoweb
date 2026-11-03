@@ -89,12 +89,21 @@ class ApiCupStockCheckoutTest extends TestCase
         $this->assertDatabaseCount('transaksi', 0);
     }
 
-    public function test_non_cup_menu_does_not_consume_cup_stock(): void
+    public function test_regular_non_cup_menu_consumes_stock_and_records_mutation(): void
     {
-        [$user, , $idMenu] = $this->createFixture(0);
+        [$user, $idCabang, $idMenu] = $this->createFixture(0);
         $idCup = DB::table('jenis_cup')->insertGetId([
-            'nama_cup' => 'Tanpa Cup',
+            'nama_cup' => 'Regular / Non-Cup',
             'volume_ml' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('stok_cup')->insert([
+            'id_cabang' => $idCabang,
+            'id_cup' => $idCup,
+            'jumlah_stok' => 5,
+            'stok_minimum' => 1,
+            'diperbarui_pada' => now(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -107,15 +116,26 @@ class ApiCupStockCheckoutTest extends TestCase
         ]);
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/transaksi/checkout', [
+        $response = $this->postJson('/api/transaksi/checkout', [
             'items' => [
-                ['id_menu' => $idMenu, 'id_cup' => $idCup, 'jumlah' => 1],
+                ['id_menu' => $idMenu, 'id_cup' => $idCup, 'jumlah' => 2],
             ],
             'metode_bayar' => 'qris',
         ])->assertCreated()
-            ->assertJsonPath('data.total_bayar', 15000);
+            ->assertJsonPath('data.total_bayar', 30000);
 
-        $this->assertDatabaseCount('mutasi_cup', 0);
+        $this->assertDatabaseHas('stok_cup', [
+            'id_cabang' => $idCabang,
+            'id_cup' => $idCup,
+            'jumlah_stok' => 3,
+        ]);
+        $this->assertDatabaseHas('mutasi_cup', [
+            'id_cabang' => $idCabang,
+            'id_cup' => $idCup,
+            'id_transaksi' => $response->json('data.id_transaksi'),
+            'jenis' => 'pemakaian',
+            'jumlah' => 2,
+        ]);
     }
 
     public function test_barista_cup_stock_endpoint_is_limited_to_their_branch(): void
@@ -142,6 +162,23 @@ class ApiCupStockCheckoutTest extends TestCase
         $this->getJson("/api/stok/cup?cabang={$idCabangLain}")
             ->assertOk()
             ->assertJsonPath('data.0.jumlah_stok', 8);
+    }
+
+    public function test_barista_cup_stock_endpoint_includes_regular_non_cup_items(): void
+    {
+        [$user, $idCabang] = $this->createFixture(8);
+        DB::table('jenis_cup')->insert([
+            'nama_cup' => 'Regular / Non-Cup',
+            'volume_ml' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/stok/cup');
+        $response->assertOk();
+        $cupNames = collect($response->json('data'))->pluck('nama_cup')->all();
+        $this->assertContains('Regular / Non-Cup', $cupNames);
     }
 
     public function test_barista_without_branch_cannot_select_another_branch_for_stock(): void

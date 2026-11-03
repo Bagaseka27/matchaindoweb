@@ -156,9 +156,7 @@ class TransaksiController extends Controller
                     'nama_cup' => $cup->nama_cup,
                 ];
 
-                if ((int) $cup->volume_ml > 0) {
-                    $kebutuhanCup[$cup->id_cup] = ($kebutuhanCup[$cup->id_cup] ?? 0) + $jumlah;
-                }
+                $kebutuhanCup[$cup->id_cup] = ($kebutuhanCup[$cup->id_cup] ?? 0) + $jumlah;
             }
 
             $uangDiterimaSen = isset($data['uang_diterima'])
