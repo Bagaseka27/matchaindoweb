@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::get('/', fn () => view('booting', [
-    'redirect_url' => route('login.form'),
+    'redirect_url' => route('login'),
     'message'      => 'Memuat Sistem Matcha Indonesia...',
 ]))->name('booting.awal');
 
@@ -28,7 +28,7 @@ Route::get('/', fn () => view('booting', [
 |--------------------------------------------------------------------------
 */
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthWebController::class, 'showLoginForm'])->name('login.form');
+    Route::get('/login', [AuthWebController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthWebController::class, 'login'])->name('login.post');
 });
 
