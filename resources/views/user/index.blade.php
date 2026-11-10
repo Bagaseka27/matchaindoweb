@@ -63,10 +63,6 @@
                         </th>
 
                         <th class="px-5 py-4 border border-green-700">
-                            Tarif Harian
-                        </th>
-
-                        <th class="px-5 py-4 border border-green-700">
                             Status
                         </th>
 
@@ -135,15 +131,6 @@
                                 @endif
 
                             </td>
-
-
-                            <!-- Tarif Harian -->
-                            <td class="px-5 py-4 border border-gray-200 text-gray-600">
-
-                                Rp {{ number_format($user->tarif_harian ?? 0, 0, ',', '.') }}
-
-                            </td>
-
 
                             <!-- Status -->
                             <td class="px-5 py-4 border border-gray-200">

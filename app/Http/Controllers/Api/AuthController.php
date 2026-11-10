@@ -38,13 +38,12 @@ class AuthController extends Controller
         // Buat token akses Sanctum
         $token = $user->createToken('mobile-token')->plainTextToken;
 
+        
         return response()->json([
-            'status' => true,
+            'status'  => true,
             'message' => 'Login Berhasil',
-            'data' => [
-                'token' => $token,
-                'user' => $user
-            ]
+            'token'   => $token,
+            'user'    => $user,
         ], 200);
     }
 

@@ -65,6 +65,20 @@ class CabangController extends Controller
             ->route('cabang.index')
             ->with('success', 'Cabang berhasil diperbarui');
     }
+    public function destroy($id)
+    {
+    $cabang = Cabang::where('id_cabang', $id)->firstOrFail();
+
+    try {
+        $cabang->delete();
+        return redirect()->route('cabang.index')
+            ->with('success', 'Cabang berhasil dihapus.');
+    } catch (\Illuminate\Database\QueryException $e) {
+        // Biasanya karena cabang masih dipakai tabel lain (foreign key)
+        return redirect()->route('cabang.index')
+            ->with('error', 'Cabang tidak bisa dihapus karena masih dipakai data lain.');
+    }
+    }
 
 
     // =====================================
