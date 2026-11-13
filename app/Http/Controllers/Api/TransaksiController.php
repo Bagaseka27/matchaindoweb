@@ -6,10 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\StokCup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Midtrans\Config;
+use Midtrans\Snap;
 
 class TransaksiController extends Controller
 {
+    public function __construct()
+    {
+        Config::$serverKey    = config('midtrans.server_key');
+        Config::$isProduction = !config('midtrans.is_sandbox');
+        Config::$isSanitized  = config('midtrans.is_sanitized');
+        Config::$is3ds        = config('midtrans.is_3ds');
+    }
+
     public function history(Request $request)
     {
         $user = $request->user();
@@ -175,15 +186,29 @@ class TransaksiController extends Controller
                 ->whereDate('waktu_transaksi', $waktu->toDateString())
                 ->max('urutan_pelanggan') + 1;
 
+            // Generate order_id unik untuk Midtrans
+            $orderId = sprintf(
+                'MTCH-%d-%s-%05d',
+                $idCabang,
+                $waktu->format('Ymd'),
+                $urutan
+            );
+
+            // Tentukan payment_status awal
+            $paymentStatus = $data['metode_bayar'] === 'tunai' ? 'paid' : 'pending';
+
             $idTransaksi = DB::table('transaksi')->insertGetId([
                 'id_cabang' => $idCabang,
                 'id_user' => $user->id_user,
+                'order_id' => $orderId,
                 'urutan_pelanggan' => $urutan,
                 'waktu_transaksi' => $waktu,
                 'total_bayar' => $totalSen / 100,
                 'metode_bayar' => $data['metode_bayar'],
                 'uang_diterima' => $data['metode_bayar'] === 'tunai' ? $uangDiterimaSen / 100 : null,
                 'kembalian' => $data['metode_bayar'] === 'tunai' ? ($uangDiterimaSen - $totalSen) / 100 : null,
+                'payment_status' => $paymentStatus,
+                'paid_at' => $data['metode_bayar'] === 'tunai' ? $waktu : null,
                 'created_at' => $waktu,
                 'updated_at' => $waktu,
             ]);
@@ -238,15 +263,65 @@ class TransaksiController extends Controller
                 ]);
             }
 
+            // ── Midtrans Snap Token (hanya untuk QRIS / non-tunai) ──
+            $snapToken = null;
+            $redirectUrl = null;
+
+            if ($data['metode_bayar'] === 'qris') {
+                try {
+                    $itemDetails = array_map(fn (array $line) => [
+                        'id'       => $line['id_menu'] . '-' . $line['id_cup'],
+                        'price'    => (int) $line['harga_satuan'],
+                        'quantity' => $line['jumlah'],
+                        'name'     => mb_substr($line['nama_menu'] . ' (' . $line['nama_cup'] . ')', 0, 50),
+                    ], $lines);
+
+                    $params = [
+                        'transaction_details' => [
+                            'order_id'     => $orderId,
+                            'gross_amount' => (int) ($totalSen / 100),
+                        ],
+                        'item_details'    => $itemDetails,
+                        'customer_details' => [
+                            'first_name' => $user->nama ?? $user->username ?? 'Kasir',
+                        ],
+                        'enabled_payments' => [
+                            'gopay', 'shopeepay', 'other_qris',
+                        ],
+                    ];
+
+                    $snapResponse = Snap::createTransaction($params);
+                    $snapToken   = $snapResponse->token;
+                    $redirectUrl = $snapResponse->redirect_url;
+
+                    // Simpan snap_token ke database
+                    DB::table('transaksi')
+                        ->where('id_transaksi', $idTransaksi)
+                        ->update([
+                            'snap_token' => $snapToken,
+                            'updated_at' => now(),
+                        ]);
+
+                } catch (\Exception $e) {
+                    Log::error('Midtrans Snap error: ' . $e->getMessage());
+                    // Transaksi tetap dibuat, tapi tanpa snap token
+                    // Mobile bisa retry dengan endpoint terpisah
+                }
+            }
+
             return [
                 'id_transaksi' => $idTransaksi,
+                'order_id' => $orderId,
                 'id_cabang' => $idCabang,
                 'urutan_pelanggan' => $urutan,
                 'waktu_transaksi' => $waktu->toISOString(),
                 'total_bayar' => $totalSen / 100,
                 'metode_bayar' => $data['metode_bayar'],
+                'payment_status' => $paymentStatus,
                 'uang_diterima' => $data['metode_bayar'] === 'tunai' ? $uangDiterimaSen / 100 : null,
                 'kembalian' => $data['metode_bayar'] === 'tunai' ? ($uangDiterimaSen - $totalSen) / 100 : null,
+                'snap_token' => $snapToken,
+                'redirect_url' => $redirectUrl,
                 'items' => array_map(fn (array $line) => [
                     'id_menu' => $line['id_menu'],
                     'nama_menu' => $line['nama_menu'],

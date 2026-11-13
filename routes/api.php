@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MenuController;
+use App\Http\Controllers\Api\MidtransController;
 use App\Http\Controllers\Api\StokController;
 use App\Http\Controllers\Api\TransaksiController;
 use Illuminate\Http\Request;
@@ -13,6 +14,9 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::post('/login', [AuthController::class, 'login']);
+
+// Midtrans Webhook — harus public, Midtrans server POST ke sini
+Route::post('/midtrans/callback', [MidtransController::class, 'callback']);
 
 /*
 |--------------------------------------------------------------------------
@@ -40,4 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // POS
     Route::get('/transaksi/riwayat', [TransaksiController::class, 'history']);
     Route::post('/transaksi/checkout', [TransaksiController::class, 'checkout']);
+
+    // Cek status pembayaran Midtrans (untuk polling dari mobile)
+    Route::get('/transaksi/payment-status/{orderId}', [MidtransController::class, 'status']);
 });
