@@ -47,7 +47,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/transaksi', [CupStockController::class, 'transactions'])->name('transaksi.index');
-    
+    Route::get('/laporan', [App\Http\Controllers\LaporanController::class, 'index'])->name('laporan.index');
+    Route::get('/laporan/cetak', [App\Http\Controllers\LaporanController::class, 'cetakPDF'])->name('laporan.cetak');
+    Route::get('/laporan/export', [App\Http\Controllers\LaporanController::class, 'exportExcel'])->name('laporan.export');
+
     Route::get('/rekonsiliasi-qris', [RekonsiliasiController::class, 'index'])
         ->name('rekonsiliasi.index');
 

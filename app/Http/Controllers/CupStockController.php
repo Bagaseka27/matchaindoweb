@@ -97,30 +97,52 @@ class CupStockController extends Controller
         return redirect()->route('stok-cup.index')->with('success', 'Stok cup berhasil ditambahkan.');
     }
 
-    public function transactions()
+    public function transactions(Request $request)
     {
-        $transaksi = DB::table('transaksi')
+        $query = DB::table('transaksi')
             ->join('cabang', 'cabang.id_cabang', '=', 'transaksi.id_cabang')
             ->join('pengguna', 'pengguna.id_user', '=', 'transaksi.id_user')
-            ->select('transaksi.*', 'cabang.nama_cabang', 'pengguna.nama as nama_barista')
-            ->orderByDesc('waktu_transaksi')
-            ->paginate(30);
+            ->select('transaksi.*', 'cabang.nama_cabang', 'pengguna.nama as nama_barista');
 
-        $detail = DB::table('detail_transaksi')
-            ->join('menu', 'menu.id_menu', '=', 'detail_transaksi.id_menu')
-            ->join('jenis_cup', 'jenis_cup.id_cup', '=', 'detail_transaksi.id_cup')
-            ->whereIn('id_transaksi', $transaksi->pluck('id_transaksi'))
-            ->select(
-                'detail_transaksi.id_transaksi',
-                'menu.nama_menu',
-                'jenis_cup.nama_cup',
-                'detail_transaksi.jumlah',
-                'detail_transaksi.harga_satuan',
-                'detail_transaksi.subtotal'
-            )
-            ->get()
-            ->groupBy('id_transaksi');
+        // 1. Filter berdasarkan Cabang jika dipilih
+        if ($request->filled('cabang')) {
+            $query->where('transaksi.id_cabang', $request->cabang);
+        }
 
-        return view('transaksi.index', compact('transaksi', 'detail'));
+        // 2. Fitur Pencarian (berdasarkan nama barista atau metode bayar)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('pengguna.nama', 'like', "%{$search}%")
+                  ->orWhere('transaksi.metode_bayar', 'like', "%{$search}%");
+            });
+        }
+
+        $transaksi = $query->orderByDesc('waktu_transaksi')
+            ->paginate(30)
+            ->withQueryString();
+
+        $detail = collect();
+        if ($transaksi->isNotEmpty()) {
+            $detail = DB::table('detail_transaksi')
+                ->join('menu', 'menu.id_menu', '=', 'detail_transaksi.id_menu')
+                ->join('jenis_cup', 'jenis_cup.id_cup', '=', 'detail_transaksi.id_cup')
+                ->whereIn('id_transaksi', $transaksi->pluck('id_transaksi'))
+                ->select(
+                    'detail_transaksi.id_transaksi',
+                    'menu.nama_menu',
+                    'jenis_cup.nama_cup',
+                    'detail_transaksi.jumlah',
+                    'detail_transaksi.harga_satuan',
+                    'detail_transaksi.subtotal'
+                )
+                ->get()
+                ->groupBy('id_transaksi');
+        }
+
+        // Ambil data cabang aktif untuk opsi dropdown filter di view
+        $cabangs = DB::table('cabang')->where('is_aktif', true)->orderBy('nama_cabang')->get();
+
+        return view('transaksi.index', compact('transaksi', 'detail', 'cabangs'));
     }
 }
