@@ -15,6 +15,9 @@ class MenuResource extends JsonResource
             'kategori'  => $this->resource->relationLoaded('kategori')
                 ? $this->resource->getRelation('kategori')?->nama_kategori
                 : $this->resource->getAttribute('kategori'),
+                
+            'foto'      => $this->foto ? asset('storage/' . $this->foto) : null,
+            
             'is_aktif'  => $this->is_aktif,
             'harga' => $this->whenLoaded('hargaMenus', fn () => $this->hargaMenus
                 ->map(fn ($harga) => [

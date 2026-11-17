@@ -13,6 +13,7 @@ class Menu extends Model
     protected $fillable = [
         'nama_menu',
         'id_kategori',
+        'foto',      
         'is_aktif',
     ];
 

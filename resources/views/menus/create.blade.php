@@ -8,15 +8,12 @@
 
     {{-- Header --}}
     <div>
-
         <h2 class="text-2xl font-bold text-gray-800">
             Tambah Menu
         </h2>
-
         <p class="text-gray-500 text-sm mt-1">
-            Tambahkan menu baru beserta kategori, variasi cup, dan harga
+            Tambahkan menu baru beserta kategori, foto, variasi cup, dan harga
         </p>
-
     </div>
 
 
@@ -27,6 +24,7 @@
             action="{{ route('menus.store') }}"
             method="POST"
             id="formMenu"
+            enctype="multipart/form-data"
         >
 
             @csrf
@@ -90,6 +88,44 @@
                 </select>
 
                 @error('id_kategori')
+
+                    <p class="text-red-500 text-sm mt-1">
+                        {{ $message }}
+                    </p>
+
+                @enderror
+
+            </div>
+
+
+            {{-- Foto Menu & Preview --}}
+            <div class="mb-5">
+
+                <label class="block mb-2 font-semibold text-gray-700">
+                    Foto Menu
+                </label>
+
+                {{-- Kotak Preview --}}
+                <div class="mb-3">
+                    <img 
+                        id="preview-foto" 
+                        src="#" 
+                        alt="Preview Foto" 
+                        class="w-28 h-28 object-cover rounded-lg border shadow-sm hidden"
+                    >
+                </div>
+
+                <input
+                    type="file"
+                    name="foto"
+                    id="input-foto"
+                    accept="image/*"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-700 bg-white"
+                >
+
+                <small class="text-gray-400 mt-1 block">Format: JPG, JPEG, PNG, WEBP (Maks. 2MB)</small>
+
+                @error('foto')
 
                     <p class="text-red-500 text-sm mt-1">
                         {{ $message }}
@@ -232,57 +268,61 @@
 </div>
 
 
-{{-- Format Harga --}}
+{{-- Format Harga & Live Preview Foto --}}
 <script>
-
 document.addEventListener('DOMContentLoaded', function () {
 
+    // Script Live Preview Foto
+    const inputFoto = document.getElementById('input-foto');
+    const previewFoto = document.getElementById('preview-foto');
+
+    if (inputFoto) {
+        inputFoto.addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    previewFoto.src = e.target.result;
+                    previewFoto.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            } else {
+                previewFoto.src = '#';
+                previewFoto.classList.add('hidden');
+            }
+        });
+    }
+
+    // Script Format Harga
     const hargaInputs = document.querySelectorAll('.harga-input');
 
     hargaInputs.forEach(function (input) {
-
         if (input.value) {
             input.value = formatRupiah(input.value);
         }
 
-
         input.addEventListener('input', function () {
-
             this.value = formatRupiah(this.value);
-
         });
-
     });
 
-
     function formatRupiah(value) {
-
         value = value.replace(/\D/g, '');
-
         if (value === '') {
             return '';
         }
-
-
         return new Intl.NumberFormat('id-ID').format(
             parseInt(value, 10)
         );
-
     }
 
-
     document.getElementById('formMenu').addEventListener('submit', function () {
-
         hargaInputs.forEach(function (input) {
-
             input.value = input.value.replace(/\./g, '');
-
         });
-
     });
 
 });
-
 </script>
 
 @endsection

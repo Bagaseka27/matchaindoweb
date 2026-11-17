@@ -8,6 +8,7 @@ use App\Models\JenisCup;
 use App\Models\HargaMenu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class MenuController extends Controller
 {
@@ -89,8 +90,6 @@ class MenuController extends Controller
      */
     public function store(Request $request)
     {
- 
-
         $harga = $request->input(
             'harga',
             []
@@ -130,6 +129,14 @@ class MenuController extends Controller
                 'exists:kategori,id_kategori',
             ],
 
+            // Validasi Foto
+            'foto' => [
+                'nullable',
+                'image',
+                'mimes:jpeg,png,jpg,webp',
+                'max:2048', // Maksimal 2MB
+            ],
+
             'is_aktif' => [
                 'nullable',
                 'boolean',
@@ -157,6 +164,15 @@ class MenuController extends Controller
             'id_kategori.exists' =>
                 'Kategori yang dipilih tidak valid.',
 
+            'foto.image' =>
+                'File harus berupa gambar.',
+
+            'foto.mimes' =>
+                'Format foto harus berjenis: jpeg, png, jpg, atau webp.',
+
+            'foto.max' =>
+                'Ukuran foto maksimal adalah 2MB.',
+
             'harga.required' =>
                 'Harga menu wajib diisi.',
 
@@ -173,10 +189,19 @@ class MenuController extends Controller
 
             /*
             |--------------------------------------------------------------------------
-            | 1. Simpan menu utama
+            | 1. Handle Upload Foto
             |--------------------------------------------------------------------------
             */
+            $fotoPath = null;
+            if ($request->hasFile('foto')) {
+                $fotoPath = $request->file('foto')->store('menu-photos', 'public');
+            }
 
+            /*
+            |--------------------------------------------------------------------------
+            | 2. Simpan menu utama
+            |--------------------------------------------------------------------------
+            */
             $menu = Menu::create([
 
                 'nama_menu' =>
@@ -184,6 +209,9 @@ class MenuController extends Controller
 
                 'id_kategori' =>
                     $request->id_kategori,
+
+                'foto' =>
+                    $fotoPath,
 
                 'is_aktif' =>
                     $request->boolean('is_aktif'),
@@ -193,7 +221,7 @@ class MenuController extends Controller
 
             /*
             |--------------------------------------------------------------------------
-            | 2. Simpan harga berdasarkan cup
+            | 3. Simpan harga berdasarkan cup
             |--------------------------------------------------------------------------
             */
 
@@ -238,23 +266,11 @@ class MenuController extends Controller
      */
     public function edit($id)
     {
-        /*
-        |--------------------------------------------------------------------------
-        | Ambil menu beserta harga
-        |--------------------------------------------------------------------------
-        */
-
         $menu = Menu::with(
                 'hargaMenus'
             )
             ->findOrFail($id);
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Ambil kategori aktif
-        |--------------------------------------------------------------------------
-        */
 
         $kategoris = Kategori::where(
                 'is_aktif',
@@ -264,17 +280,10 @@ class MenuController extends Controller
             ->get();
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Ambil semua jenis cup
-        |--------------------------------------------------------------------------
-        */
-
         $cups = JenisCup::orderBy(
                 'id_cup'
             )
             ->get();
-
 
 
         $hargaMap = $menu->hargaMenus
@@ -347,6 +356,14 @@ class MenuController extends Controller
                 'exists:kategori,id_kategori',
             ],
 
+            // Validasi Foto saat Update
+            'foto' => [
+                'nullable',
+                'image',
+                'mimes:jpeg,png,jpg,webp',
+                'max:2048',
+            ],
+
             'is_aktif' => [
                 'nullable',
                 'boolean',
@@ -374,6 +391,15 @@ class MenuController extends Controller
             'id_kategori.exists' =>
                 'Kategori yang dipilih tidak valid.',
 
+            'foto.image' =>
+                'File harus berupa gambar.',
+
+            'foto.mimes' =>
+                'Format foto harus berjenis: jpeg, png, jpg, atau webp.',
+
+            'foto.max' =>
+                'Ukuran foto maksimal adalah 2MB.',
+
             'harga.required' =>
                 'Harga menu wajib diisi.',
 
@@ -388,7 +414,7 @@ class MenuController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Update Menu + Harga
+        | Update Menu + Harga + Foto
         |--------------------------------------------------------------------------
         */
 
@@ -397,6 +423,18 @@ class MenuController extends Controller
             $menu
         ) {
 
+            $fotoPath = $menu->foto;
+
+            // Jika ada upload foto baru
+            if ($request->hasFile('foto')) {
+                // Hapus foto lama jika ada di storage
+                if ($menu->foto && Storage::disk('public')->exists($menu->foto)) {
+                    Storage::disk('public')->delete($menu->foto);
+                }
+                // Simpan foto baru
+                $fotoPath = $request->file('foto')->store('menu-photos', 'public');
+            }
+
             $menu->update([
 
                 'nama_menu' =>
@@ -404,6 +442,9 @@ class MenuController extends Controller
 
                 'id_kategori' =>
                     $request->id_kategori,
+
+                'foto' =>
+                    $fotoPath,
 
                 'is_aktif' =>
                     $request->boolean('is_aktif'),
@@ -519,6 +560,11 @@ class MenuController extends Controller
         $menu = Menu::findOrFail($id);
 
         DB::transaction(function () use ($menu) {
+
+            // Hapus file fisik foto dari storage jika ada
+            if ($menu->foto && Storage::disk('public')->exists($menu->foto)) {
+                Storage::disk('public')->delete($menu->foto);
+            }
 
             DB::table('harga_menu')
                 ->where(

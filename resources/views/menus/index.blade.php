@@ -110,15 +110,15 @@
 
                     <col class="w-[70px]">
 
-                    <col class="w-[190px]">
+                    <col class="w-[220px]">
 
-                    <col class="w-[190px]">
+                    <col class="w-[170px]">
 
-                    <col class="w-[330px]">
+                    <col class="w-[310px]">
 
-                    <col class="w-[150px]">
+                    <col class="w-[130px]">
 
-                    <col class="w-[230px]">
+                    <col class="w-[200px]">
 
                 </colgroup>
 
@@ -171,13 +171,22 @@
                             </td>
 
 
-                            {{-- Nama Menu --}}
+                            {{-- Nama Menu & Foto --}}
                             <td class="px-6 py-4 border border-gray-200">
 
-                                <div class="font-semibold text-gray-800 break-words">
+                                <div class="flex items-center gap-3">
+                                    @if($menu->foto)
+                                        <img src="{{ asset('storage/' . $menu->foto) }}" alt="{{ $menu->nama_menu }}" class="w-12 h-12 object-cover rounded-lg border shadow-sm flex-shrink-0">
+                                    @else
+                                        <div class="w-12 h-12 bg-gray-100 rounded-lg border flex items-center justify-center text-gray-400 text-xs flex-shrink-0">
+                                            No Img
+                                        </div>
+                                    @endif
+                                    <div class="font-semibold text-gray-800 break-words">
 
-                                    {{ $menu->nama_menu }}
+                                        {{ $menu->nama_menu }}
 
+                                    </div>
                                 </div>
 
                             </td>
