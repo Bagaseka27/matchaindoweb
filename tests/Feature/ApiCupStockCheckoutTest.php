@@ -243,18 +243,31 @@ class ApiCupStockCheckoutTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $makeTransaction = fn (int $branchId) => DB::table('transaksi')->insertGetId([
+        $baristaLain = User::create([
+            'id_cabang' => $idCabang,
+            'nama' => 'Barista Cabang Sama',
+            'username' => 'barista-cabang-sama',
+            'password' => 'password',
+            'role' => 'barista',
+            'is_aktif' => true,
+        ]);
+        $makeTransaction = fn (int $branchId, int $userId, $waktu) => DB::table('transaksi')->insertGetId([
             'id_cabang' => $branchId,
-            'id_user' => $user->id_user,
+            'id_user' => $userId,
             'urutan_pelanggan' => 1,
-            'waktu_transaksi' => now(),
+            'waktu_transaksi' => $waktu,
             'total_bayar' => 18000,
             'metode_bayar' => 'qris',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $ownTransaction = $makeTransaction($idCabang);
-        $makeTransaction($idCabangLain);
+        $ownTransaction = $makeTransaction($idCabang, $user->id_user, now());
+        $sameBranchTransaction = $makeTransaction(
+            $idCabang,
+            $baristaLain->id_user,
+            now()->subMinute()
+        );
+        $makeTransaction($idCabangLain, $user->id_user, now());
         DB::table('detail_transaksi')->insert([
             'id_transaksi' => $ownTransaction,
             'id_menu' => $idMenu,
@@ -269,8 +282,9 @@ class ApiCupStockCheckoutTest extends TestCase
 
         $this->getJson('/api/transaksi/riwayat')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
+            ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.id_transaksi', $ownTransaction)
+            ->assertJsonPath('data.1.id_transaksi', $sameBranchTransaction)
             ->assertJsonPath('data.0.metode_bayar', 'qris')
             ->assertJsonPath('data.0.items.0.nama_menu', 'Matcha Latte')
             ->assertJsonPath('data.0.items.0.nama_cup', 'Medium');

@@ -186,16 +186,21 @@
                             {{-- Kategori --}}
                             <td class="px-6 py-4 border border-gray-200">
 
-                                @if($menu->kategori)
+                                @php($kategoriMenu = $menu->getRelation('kategori'))
 
+                                @if($kategoriMenu)
                                     <span
                                         class="inline-block max-w-full px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-700 whitespace-normal break-words"
                                     >
-
-                                        {{ $menu->kategori->nama_kategori }}
-
+                                        {{ $kategoriMenu->nama_kategori }}
                                     </span>
 
+                                @elseif($menu->getAttribute('kategori'))
+                                    <span
+                                        class="inline-block max-w-full px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-700 whitespace-normal break-words"
+                                    >
+                                        {{ $menu->getAttribute('kategori') }}
+                                    </span>
                                 @else
 
                                     <span class="text-gray-400">

@@ -220,6 +220,14 @@ return new class extends Migration
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
+
+        //18. Table Kategori
+        Schema::create('kategori', function (Blueprint $table) {
+            $table->id('id_kategori');
+            $table->string('nama_kategori', 100);
+            $table->boolean('is_aktif')->default(true);
+            $table->timestamps();
+        });
     }
 
     public function down()
@@ -244,5 +252,6 @@ return new class extends Migration
         Schema::dropIfExists('shift');
         Schema::dropIfExists('pengguna');
         Schema::dropIfExists('cabang');
+        Schema::dropIfExists('kategori');
     }
 };

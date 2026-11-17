@@ -36,11 +36,9 @@ class TransaksiController extends Controller
         }
 
         $transaksi = DB::table('transaksi')
-        ->where('id_cabang', $user->id_cabang)
-        ->where('id_user', $user->id_user)
-        ->orderByDesc('waktu_transaksi')
-        ->limit(100)
-        ->get();
+            ->where('id_cabang', $idCabang)
+            ->orderByDesc('waktu_transaksi')
+            ->get();
 
         $itemsByTransaction = DB::table('detail_transaksi')
             ->join('menu', 'menu.id_menu', '=', 'detail_transaksi.id_menu')
