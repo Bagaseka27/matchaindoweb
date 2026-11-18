@@ -61,7 +61,7 @@
     </div>
 </div>
 
-<!-- Rincian Pendapatan 4 Cabang Outdoor (Hanya tampil jika tidak sedang memfilter cabang tertentu) -->
+<!-- Rincian Pendapatan 4 Cabang Outdoor -->
 @if(!$idCabang)
 <div class="mb-6">
     <h3 class="text-lg font-semibold text-gray-800 mb-4">Performansi 4 Cabang Outdoor Hari Ini</h3>

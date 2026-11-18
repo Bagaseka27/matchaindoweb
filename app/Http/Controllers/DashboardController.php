@@ -25,7 +25,7 @@ class DashboardController extends Controller
         // 2. Jumlah transaksi
         $totalTransaksi = (clone $transaksiHariIni)->count();
 
-        // 3. Cabang teramai hari ini (hanya muncul jika tidak sedang memfilter cabang tertentu)
+        // 3. Cabang teramai hari ini
         $cabangTeramai = null;
         if (!$idCabang) {
             $cabangTeramai = DB::table('transaksi')
@@ -38,7 +38,7 @@ class DashboardController extends Controller
                 ->first();
         }
 
-        // 4. Rincian pendapatan per cabang (untuk perbandingan 4 cabang outdoor)
+        // 4. Rincian pendapatan per cabang (4 cabang outdoor)
         $pendapatanPerCabang = DB::table('cabang')
             ->leftJoin('transaksi', function($join) {
                 $join->on('cabang.id_cabang', '=', 'transaksi.id_cabang')
@@ -50,7 +50,7 @@ class DashboardController extends Controller
             ->groupBy('cabang.id_cabang', 'cabang.nama_cabang')
             ->get();
 
-        // 5. Grafik penjualan 7 hari terakhir (bisa difilter per cabang)
+        // 5. Grafik penjualan 7 hari terakhir
         $grafikQuery = DB::table('transaksi')
             ->selectRaw('DATE(waktu_transaksi) as tanggal')
             ->selectRaw('SUM(total_bayar) as total_pendapatan')
@@ -64,7 +64,7 @@ class DashboardController extends Controller
             ->orderBy('tanggal', 'ASC')
             ->get();
 
-        // 6. Menu Terlaris (Top 5) per Cabang / Global
+        // 6. Menu Terlaris (Top 5)
         $menuTerlarisQuery = DB::table('detail_transaksi')
             ->join('transaksi', 'detail_transaksi.id_transaksi', '=', 'transaksi.id_transaksi')
             ->join('menu', 'detail_transaksi.id_menu', '=', 'menu.id_menu')
@@ -80,7 +80,7 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // 7. Menu Paling Sepi (Bottom 5) per Cabang / Global
+        // 7. Menu Paling Sepi (Bottom 5)
         $menuSepi = DB::table('menu')
             ->select('menu.id_menu', 'menu.nama_menu')
             ->get()
@@ -99,7 +99,7 @@ class DashboardController extends Controller
             ->take(5)
             ->values();
 
-        // Ambil daftar cabang untuk dropdown filter
+        // Daftar cabang untuk dropdown filter
         $cabangs = DB::table('cabang')->where('is_aktif', true)->orderBy('nama_cabang')->get();
 
         return view('dashboard', compact(

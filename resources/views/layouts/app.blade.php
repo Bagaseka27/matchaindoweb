@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Dashboard') - Matcha Indonesia</title>
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss5@4"></script> <!-- atau script tailwindcdn standar kamu -->
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/lib/index.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -46,7 +48,7 @@
             </a>
 
             <!-- KELOLA DATA MASTER (Dropdown) -->
-            <details class="relative group">
+            <details class="relative group" {{ request()->routeIs('menus.*') || request()->routeIs('kategori.*') || request()->routeIs('jenis-cup.*') ? 'open' : '' }}>
                 <summary class="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg cursor-pointer list-none hover:bg-green-700 transition">
                     <span class="flex items-center gap-3">
                         <span>📦</span> Kelola Data Master
@@ -133,6 +135,9 @@
             @yield('content')
         </div>
     </main>
+
+    <!-- STACK SCRIPTS UNTUK RENDER CHART & SCRIPT TAMBAHAN -->
+    @stack('scripts')
 
 </body>
 </html>

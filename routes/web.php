@@ -72,9 +72,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [CabangController::class, 'storeShift'])->name('.store');
     });
 
-    Route::put('/shift/{id}', [CabangController::class, 'updateShift'])->name('shift.update');
-    Route::delete('/shift/{id}', [CabangController::class, 'deleteShift'])->name('shift.delete');
-
     // Kelola Shift terpisah
     Route::get('/shift', [CabangController::class, 'indexShift'])
         ->name('shift.index');
@@ -105,7 +102,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{cabang}/{bahan}', [StokController::class, 'destroy'])->name('destroy');
     })->whereNumber(['cabang', 'bahan']);
 
-    // Jadwal kerja barista
+    // Jadwal kerja barista (Penugasan Mingguan & Harian)
+    Route::post('/jadwal-shift/mingguan', [CabangController::class, 'storeJadwalMingguan'])
+        ->name('jadwal-shift.mingguan');
+
+    Route::post('/jadwal-shift/salin-minggu-lalu', [CabangController::class, 'salinJadwalMingguLalu'])
+        ->name('jadwal-shift.salin');
+
     Route::post('/jadwal-shift', [CabangController::class, 'storeJadwalShift'])
         ->name('jadwal-shift.store');
 

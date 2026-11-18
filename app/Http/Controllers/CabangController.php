@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 use App\Models\Cabang;
 use App\Models\Shift;
 use App\Models\User;
@@ -122,69 +123,144 @@ class CabangController extends Controller
     // KELOLA SHIFT TERPISAH
     // =====================================
 
-    public function indexShift()
+    public function indexShift(Request $request)
     {
-        // Ambil data shift beserta cabang
-        $shifts = Shift::leftJoin(
+        $today = Carbon::today();
+
+        // Tentukan awal minggu (Senin). Default: Senin minggu ini, atau dari request week_start
+        if ($request->filled('week_start')) {
+            try {
+                $startOfWeek = Carbon::parse($request->week_start)->startOfWeek(Carbon::MONDAY);
+            } catch (\Exception $e) {
+                $startOfWeek = $today->copy()->startOfWeek(Carbon::MONDAY);
+            }
+        } elseif ($request->get('period') === 'next') {
+            $startOfWeek = $today->copy()->addWeek()->startOfWeek(Carbon::MONDAY);
+        } else {
+            $startOfWeek = $today->copy()->startOfWeek(Carbon::MONDAY);
+        }
+
+        $endOfWeek = $startOfWeek->copy()->endOfWeek(Carbon::SUNDAY);
+
+        // Buat array 7 hari untuk periode 1 minggu ini (Senin - Minggu)
+        $namaHari = [
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+            7 => 'Minggu',
+        ];
+
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $date = $startOfWeek->copy()->addDays($i);
+            $dayNum = $date->dayOfWeekIso; // 1 = Senin, 7 = Minggu
+            $days[] = [
+                'date' => $date->format('Y-m-d'),
+                'day_num' => $dayNum,
+                'day_name' => $namaHari[$dayNum],
+                'date_formatted' => $date->format('d M Y'),
+                'short_date' => $date->format('d/m'),
+                'is_today' => $date->isToday(),
+                'is_past' => $date->isPast() && !$date->isToday(),
+            ];
+        }
+
+        $prevWeek = $startOfWeek->copy()->subWeek()->format('Y-m-d');
+        $nextWeek = $startOfWeek->copy()->addWeek()->format('Y-m-d');
+        $currentWeekMonday = $today->copy()->startOfWeek(Carbon::MONDAY)->format('Y-m-d');
+        $nextWeekMonday = $today->copy()->addWeek()->startOfWeek(Carbon::MONDAY)->format('Y-m-d');
+
+        $isThisWeek = $startOfWeek->format('Y-m-d') === $currentWeekMonday;
+        $isNextWeek = $startOfWeek->format('Y-m-d') === $nextWeekMonday;
+
+        // Filter Cabang
+        $cabangId = $request->get('cabang_id');
+        $cabangs = Cabang::orderBy('nama_cabang')->get();
+
+        // Ambil data master shift (beserta cabang)
+        $shiftsQuery = Shift::leftJoin(
             'cabang',
             'shift.id_cabang',
             '=',
             'cabang.id_cabang'
         )
-            ->select(
-                'shift.*',
-                'cabang.nama_cabang'
-            )
+            ->select('shift.*', 'cabang.nama_cabang')
             ->orderBy('shift.id_cabang')
-            ->orderBy('shift.jam_mulai')
-            ->get();
+            ->orderBy('shift.jam_mulai');
 
-        // Ambil daftar cabang
-        $cabangs = Cabang::orderBy('nama_cabang')->get();
+        if ($cabangId) {
+            $shiftsQuery->where('shift.id_cabang', $cabangId);
+        }
+
+        $shifts = $shiftsQuery->get();
 
         // Ambil barista aktif
-        $baristas = User::where('role', 'barista')
+        $baristasQuery = User::where('role', 'barista')
             ->where('is_aktif', 1)
-            ->orderBy('nama')
-            ->get();
+            ->orderBy('nama');
 
-        // Ambil jadwal beserta nama barista
+        if ($cabangId) {
+            $baristasQuery->where('id_cabang', $cabangId);
+        }
+
+        $baristas = $baristasQuery->get();
+        $allBaristas = User::where('role', 'barista')->where('is_aktif', 1)->orderBy('nama')->get();
+
+        // Ambil jadwal barista HANYA untuk 1 minggu yang dipilih
         $jadwals = DB::table('jadwal_shift')
-            ->join(
-                'pengguna',
-                'jadwal_shift.id_user',
-                '=',
-                'pengguna.id_user'
-            )
-            ->join(
-                'shift',
-                'jadwal_shift.id_shift',
-                '=',
-                'shift.id_shift'
-            )
-            ->join(
-                'cabang',
-                'shift.id_cabang',
-                '=',
-                'cabang.id_cabang'
-            )
+            ->join('pengguna', 'jadwal_shift.id_user', '=', 'pengguna.id_user')
+            ->join('shift', 'jadwal_shift.id_shift', '=', 'shift.id_shift')
+            ->join('cabang', 'shift.id_cabang', '=', 'cabang.id_cabang')
             ->select(
                 'jadwal_shift.*',
                 'pengguna.nama as nama_barista',
                 'shift.nama_shift',
                 'shift.jam_mulai',
                 'shift.jam_selesai',
+                'shift.id_cabang',
                 'cabang.nama_cabang'
             )
-            ->orderByDesc('jadwal_shift.tanggal')
+            ->whereBetween('jadwal_shift.tanggal', [
+                $startOfWeek->format('Y-m-d'),
+                $endOfWeek->format('Y-m-d')
+            ])
+            ->when($cabangId, function ($query) use ($cabangId) {
+                $query->where('shift.id_cabang', $cabangId);
+            })
+            ->orderBy('jadwal_shift.tanggal')
             ->orderBy('shift.jam_mulai')
             ->get();
+
+        // Cek apakah ada jadwal minggu sebelumnya yang dapat disalin
+        $prevWeekStart = $startOfWeek->copy()->subWeek()->format('Y-m-d');
+        $prevWeekEnd = $startOfWeek->copy()->subDays(1)->format('Y-m-d');
+        $hasPrevWeekSchedule = DB::table('jadwal_shift')
+            ->whereBetween('tanggal', [$prevWeekStart, $prevWeekEnd])
+            ->exists();
+
+        $totalPenugasan = $jadwals->count();
 
         return view('shift.index', compact(
             'shifts',
             'cabangs',
             'baristas',
-            'jadwals'
+            'allBaristas',
+            'jadwals',
+            'days',
+            'startOfWeek',
+            'endOfWeek',
+            'prevWeek',
+            'nextWeek',
+            'currentWeekMonday',
+            'nextWeekMonday',
+            'isThisWeek',
+            'isNextWeek',
+            'cabangId',
+            'hasPrevWeekSchedule',
+            'totalPenugasan'
         ));
     }
 
@@ -304,7 +380,7 @@ class CabangController extends Controller
 
 
     // =====================================
-    // TAMBAH JADWAL BARISTA
+    // TAMBAH JADWAL BARISTA (HARIAN)
     // =====================================
 
     public function storeJadwalShift(Request $request)
@@ -313,6 +389,8 @@ class CabangController extends Controller
             'id_user' => 'required|exists:pengguna,id_user',
             'id_shift' => 'required|exists:shift,id_shift',
             'tanggal' => 'required|date_format:Y-m-d',
+            'week_start' => 'nullable|date_format:Y-m-d',
+            'cabang_id' => 'nullable',
         ]);
 
         $this->validasiPenugasan($data);
@@ -326,10 +404,175 @@ class CabangController extends Controller
         ]);
 
         return redirect()
-            ->route('shift.index')
+            ->route('shift.index', array_filter([
+                'week_start' => $request->week_start,
+                'cabang_id' => $request->cabang_id,
+            ]))
             ->with('success', 'Jadwal barista berhasil ditambahkan');
     }
 
+    // =====================================
+    // TAMBAH JADWAL BARISTA (MINGGUAN / 1 MINGGU KE DEPAN)
+    // =====================================
+
+    public function storeJadwalMingguan(Request $request)
+    {
+        $data = $request->validate([
+            'id_user' => 'required|exists:pengguna,id_user',
+            'id_shift' => 'required|exists:shift,id_shift',
+            'tanggal' => 'required|array|min:1',
+            'tanggal.*' => 'required|date_format:Y-m-d',
+            'week_start' => 'nullable|date_format:Y-m-d',
+            'cabang_id' => 'nullable',
+        ]);
+
+        $shift = Shift::findOrFail($data['id_shift']);
+        $barista = User::findOrFail($data['id_user']);
+
+        // Pastikan barista aktif dan sesuai cabang shift
+        if (
+            $barista->role !== 'barista' ||
+            !$barista->is_aktif ||
+            (string) $barista->id_cabang !== (string) $shift->id_cabang
+        ) {
+            throw ValidationException::withMessages([
+                'id_user' => 'Pilih barista aktif dari cabang yang sama dengan shift.',
+            ]);
+        }
+
+        $berhasil = 0;
+        $dilewati = 0;
+
+        foreach ($data['tanggal'] as $tgl) {
+            // Mencegah jadwal ganda di tanggal sama
+            $duplikat = DB::table('jadwal_shift')
+                ->where('id_user', $data['id_user'])
+                ->where('tanggal', $tgl)
+                ->exists();
+
+            if ($duplikat) {
+                $dilewati++;
+                continue;
+            }
+
+            DB::table('jadwal_shift')->insert([
+                'id_user' => $data['id_user'],
+                'id_shift' => $data['id_shift'],
+                'tanggal' => $tgl,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $berhasil++;
+        }
+
+        $redirectParams = array_filter([
+            'week_start' => $request->week_start,
+            'cabang_id' => $request->cabang_id,
+        ]);
+
+        if ($berhasil > 0 && $dilewati === 0) {
+            return redirect()
+                ->route('shift.index', $redirectParams)
+                ->with('success', "Penugasan mingguan berhasil disimpan ({$berhasil} hari kerja).");
+        } elseif ($berhasil > 0 && $dilewati > 0) {
+            return redirect()
+                ->route('shift.index', $redirectParams)
+                ->with('warning', "{$berhasil} hari berhasil ditugaskan. {$dilewati} hari dilewati karena barista sudah punya jadwal di tanggal tersebut.");
+        } else {
+            return redirect()
+                ->route('shift.index', $redirectParams)
+                ->withErrors([
+                    'jadwal' => 'Semua hari yang dipilih dilewati karena barista sudah memiliki jadwal di tanggal tersebut.',
+                ]);
+        }
+    }
+
+    // =====================================
+    // SALIN JADWAL DARI MINGGU SEBELUMNYA
+    // =====================================
+
+    public function salinJadwalMingguLalu(Request $request)
+    {
+        $request->validate([
+            'target_week_start' => 'required|date_format:Y-m-d',
+            'cabang_id' => 'nullable',
+        ]);
+
+        $targetStart = Carbon::parse($request->target_week_start)->startOfWeek(Carbon::MONDAY);
+        $prevStart = $targetStart->copy()->subWeek();
+        $prevEnd = $prevStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        // Ambil jadwal minggu lalu
+        $query = DB::table('jadwal_shift')
+            ->join('shift', 'jadwal_shift.id_shift', '=', 'shift.id_shift')
+            ->select('jadwal_shift.*', 'shift.id_cabang')
+            ->whereBetween('jadwal_shift.tanggal', [
+                $prevStart->format('Y-m-d'),
+                $prevEnd->format('Y-m-d')
+            ]);
+
+        if ($request->filled('cabang_id')) {
+            $query->where('shift.id_cabang', $request->cabang_id);
+        }
+
+        $jadwalLalu = $query->get();
+
+        $redirectParams = array_filter([
+            'week_start' => $targetStart->format('Y-m-d'),
+            'cabang_id' => $request->cabang_id,
+        ]);
+
+        if ($jadwalLalu->isEmpty()) {
+            return redirect()
+                ->route('shift.index', $redirectParams)
+                ->withErrors(['salin' => 'Tidak ditemukan jadwal pada minggu sebelumnya untuk disalin.']);
+        }
+
+        $disalin = 0;
+        $dilewati = 0;
+
+        foreach ($jadwalLalu as $row) {
+            $tanggalLama = Carbon::parse($row->tanggal);
+            $tanggalBaru = $tanggalLama->copy()->addWeek()->format('Y-m-d');
+
+            // Cek keaktifan barista
+            $barista = DB::table('pengguna')
+                ->where('id_user', $row->id_user)
+                ->where('is_aktif', 1)
+                ->first();
+
+            if (!$barista) {
+                $dilewati++;
+                continue;
+            }
+
+            // Cek apakah tanggal baru sudah punya penugasan untuk barista ini
+            $adaJadwal = DB::table('jadwal_shift')
+                ->where('id_user', $row->id_user)
+                ->where('tanggal', $tanggalBaru)
+                ->exists();
+
+            if ($adaJadwal) {
+                $dilewati++;
+                continue;
+            }
+
+            DB::table('jadwal_shift')->insert([
+                'id_user' => $row->id_user,
+                'id_shift' => $row->id_shift,
+                'tanggal' => $tanggalBaru,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $disalin++;
+        }
+
+        return redirect()
+            ->route('shift.index', $redirectParams)
+            ->with('success', "Berhasil menyalin {$disalin} jadwal dari minggu sebelumnya. ({$dilewati} dilewati karena sudah ada jadwal / barista nonaktif).");
+    }
 
     // =====================================
     // EDIT JADWAL BARISTA
@@ -341,6 +584,8 @@ class CabangController extends Controller
             'id_user' => 'required|exists:pengguna,id_user',
             'id_shift' => 'required|exists:shift,id_shift',
             'tanggal' => 'required|date_format:Y-m-d',
+            'week_start' => 'nullable|date_format:Y-m-d',
+            'cabang_id' => 'nullable',
         ]);
 
         $jadwal = DB::table('jadwal_shift')
@@ -349,6 +594,11 @@ class CabangController extends Controller
 
         abort_if(!$jadwal, 404);
 
+        $redirectParams = array_filter([
+            'week_start' => $request->week_start,
+            'cabang_id' => $request->cabang_id,
+        ]);
+
         // Lindungi data yang sudah dipakai penggajian
         $digunakan = DB::table('penggajian')
             ->where('id_jadwal', $id)
@@ -356,7 +606,7 @@ class CabangController extends Controller
 
         if ($digunakan) {
             return redirect()
-                ->route('shift.index')
+                ->route('shift.index', $redirectParams)
                 ->withErrors([
                     'jadwal' => 'Jadwal sudah digunakan dalam penggajian dan tidak dapat diubah.',
                 ]);
@@ -374,7 +624,7 @@ class CabangController extends Controller
             ]);
 
         return redirect()
-            ->route('shift.index')
+            ->route('shift.index', $redirectParams)
             ->with('success', 'Jadwal barista berhasil diperbarui');
     }
 
@@ -383,13 +633,18 @@ class CabangController extends Controller
     // HAPUS JADWAL BARISTA
     // =====================================
 
-    public function deleteJadwalShift($id)
+    public function deleteJadwalShift(Request $request, $id)
     {
         $jadwal = DB::table('jadwal_shift')
             ->where('id_jadwal', $id)
             ->first();
 
         abort_if(!$jadwal, 404);
+
+        $redirectParams = array_filter([
+            'week_start' => $request->week_start,
+            'cabang_id' => $request->cabang_id,
+        ]);
 
         // Periksa relasi penggajian
         $digunakan = DB::table('penggajian')
@@ -398,7 +653,7 @@ class CabangController extends Controller
 
         if ($digunakan) {
             return redirect()
-                ->route('shift.index')
+                ->route('shift.index', $redirectParams)
                 ->withErrors([
                     'jadwal' => 'Jadwal tidak dapat dihapus karena sudah digunakan dalam penggajian.',
                 ]);
@@ -409,7 +664,7 @@ class CabangController extends Controller
             ->delete();
 
         return redirect()
-            ->route('shift.index')
+            ->route('shift.index', $redirectParams)
             ->with('success', 'Jadwal barista berhasil dihapus');
     }
 }
