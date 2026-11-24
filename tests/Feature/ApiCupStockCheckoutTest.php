@@ -290,6 +290,62 @@ class ApiCupStockCheckoutTest extends TestCase
             ->assertJsonPath('data.0.items.0.nama_cup', 'Medium');
     }
 
+    public function test_mobile_dashboard_is_scoped_to_the_logged_in_account_and_paid_sales(): void
+    {
+        [$user, $idCabang, $idMenu, $idCup] = $this->createFixture(8);
+        $otherUser = User::create([
+            'id_cabang' => $idCabang,
+            'nama' => 'Barista Lain',
+            'username' => 'barista-dashboard-lain',
+            'password' => 'password',
+            'role' => 'barista',
+            'is_aktif' => true,
+        ]);
+        $makeTransaction = function (int $userId, string $status, int $sequence) use ($idCabang) {
+            return DB::table('transaksi')->insertGetId([
+                'id_cabang' => $idCabang,
+                'id_user' => $userId,
+                'order_id' => "DASHBOARD-{$userId}-{$sequence}",
+                'urutan_pelanggan' => $sequence,
+                'waktu_transaksi' => now()->subMinute(),
+                'total_bayar' => 18000,
+                'metode_bayar' => 'tunai',
+                'payment_status' => $status,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        };
+        $paidTransaction = $makeTransaction($user->id_user, 'paid', 1);
+        $pendingTransaction = $makeTransaction($user->id_user, 'pending', 2);
+        $otherUserTransaction = $makeTransaction($otherUser->id_user, 'paid', 3);
+
+        foreach ([
+            [$paidTransaction, 2],
+            [$pendingTransaction, 5],
+            [$otherUserTransaction, 8],
+        ] as [$transactionId, $quantity]) {
+            DB::table('detail_transaksi')->insert([
+                'id_transaksi' => $transactionId,
+                'id_menu' => $idMenu,
+                'id_cup' => $idCup,
+                'jumlah' => $quantity,
+                'harga_satuan' => 18000,
+                'subtotal' => 18000 * $quantity,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/transaksi/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.pendapatan_hari_ini', 18000)
+            ->assertJsonPath('data.jumlah_transaksi_hari_ini', 1)
+            ->assertJsonCount(7, 'data.grafik_penjualan')
+            ->assertJsonPath('data.grafik_penjualan.6.total_pendapatan', 18000)
+            ->assertJsonPath('data.menu_terlaris.0.total_terjual', 2);
+    }
+
     private function createFixture(int $jumlahStok): array
     {
         $idCabang = DB::table('cabang')->insertGetId([

@@ -21,6 +21,64 @@ class TransaksiController extends Controller
         Config::$is3ds        = config('midtrans.is_3ds');
     }
 
+    public function dashboard(Request $request)
+    {
+        $user = $request->user();
+        abort_unless(in_array($user->role, ['barista', 'pemilik'], true), 403);
+
+        $today = now()->startOfDay();
+        $firstDay = $today->copy()->subDays(6);
+        $dailyTotals = DB::table('transaksi')
+            ->where('id_user', $user->id_user)
+            ->where('payment_status', 'paid')
+            ->where('waktu_transaksi', '>=', $firstDay)
+            ->selectRaw('DATE(waktu_transaksi) as tanggal')
+            ->selectRaw('SUM(total_bayar) as total_pendapatan')
+            ->groupBy('tanggal')
+            ->orderBy('tanggal')
+            ->get()
+            ->keyBy('tanggal');
+
+        $salesChart = collect(range(0, 6))->map(function (int $day) use ($firstDay, $dailyTotals) {
+            $date = $firstDay->copy()->addDays($day)->toDateString();
+
+            return [
+                'tanggal' => $date,
+                'total_pendapatan' => (float) ($dailyTotals->get($date)->total_pendapatan ?? 0),
+            ];
+        });
+
+        $topMenus = DB::table('detail_transaksi')
+            ->join('transaksi', 'transaksi.id_transaksi', '=', 'detail_transaksi.id_transaksi')
+            ->join('menu', 'menu.id_menu', '=', 'detail_transaksi.id_menu')
+            ->where('transaksi.id_user', $user->id_user)
+            ->where('transaksi.payment_status', 'paid')
+            ->select('menu.nama_menu')
+            ->selectRaw('SUM(detail_transaksi.jumlah) as total_terjual')
+            ->groupBy('menu.id_menu', 'menu.nama_menu')
+            ->orderByDesc('total_terjual')
+            ->limit(5)
+            ->get()
+            ->map(fn ($menu) => [
+                'nama_menu' => $menu->nama_menu,
+                'total_terjual' => (int) $menu->total_terjual,
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => [
+                'pendapatan_hari_ini' => (float) ($salesChart->last()['total_pendapatan'] ?? 0),
+                'jumlah_transaksi_hari_ini' => DB::table('transaksi')
+                    ->where('id_user', $user->id_user)
+                    ->where('payment_status', 'paid')
+                    ->whereDate('waktu_transaksi', $today)
+                    ->count(),
+                'grafik_penjualan' => $salesChart->values(),
+                'menu_terlaris' => $topMenus,
+            ],
+        ]);
+    }
+
     public function history(Request $request)
     {
         $user = $request->user();
