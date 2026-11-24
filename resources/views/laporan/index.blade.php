@@ -53,26 +53,6 @@
         </form>
     </div>
 
-    <!-- Ringkasan Statistik Utama -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-[#2F593E]">
-            <h3 class="text-xs font-bold uppercase text-gray-400 mb-1">Total Pendapatan</h3>
-            <p class="text-2xl font-extrabold text-gray-800">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-[#2F593E]">
-            <h3 class="text-xs font-bold uppercase text-gray-400 mb-1">Jumlah Transaksi</h3>
-            <p class="text-2xl font-extrabold text-gray-800">{{ number_format($totalTransaksi, 0, ',', '.') }} Transaksi</p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-green-600">
-            <h3 class="text-xs font-bold uppercase text-gray-400 mb-1">Pendapatan Tunai (Cash)</h3>
-            <p class="text-2xl font-extrabold text-gray-800">Rp {{ number_format($totalTunai, 0, ',', '.') }}</p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-t-4 border-blue-600">
-            <h3 class="text-xs font-bold uppercase text-gray-400 mb-1">Pendapatan QRIS</h3>
-            <p class="text-2xl font-extrabold text-gray-800">Rp {{ number_format($totalQris, 0, ',', '.') }}</p>
-        </div>
-    </div>
-
     <!-- Tabel Analisis Per Bulan & Per Cabang -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Rekap Per Bulan -->
