@@ -112,6 +112,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/jadwal-shift', [CabangController::class, 'storeJadwalShift'])
         ->name('jadwal-shift.store');
 
+    Route::post('/jadwal-shift/{id}/tukar', [CabangController::class, 'swapJadwalShift'])
+        ->name('jadwal-shift.swap');
+
     Route::put('/jadwal-shift/{id}', [CabangController::class, 'updateJadwalShift'])
         ->name('jadwal-shift.update');
 

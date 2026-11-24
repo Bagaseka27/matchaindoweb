@@ -459,6 +459,12 @@
                                                             title="Ubah barista">
                                                             ✏️ Edit
                                                         </button>
+                                                        <button type="button"
+                                                            onclick="openSwapJadwalModal({{ $j->id_jadwal }})"
+                                                            class="text-blue-600 hover:text-blue-800 p-0.5 rounded text-[11px] font-semibold"
+                                                            title="Tukar jadwal dengan barista lain">
+                                                            ⇄ Tukar
+                                                        </button>
 
                                                         {{-- Hapus Jadwal --}}
                                                         <form action="{{ route('jadwal-shift.delete', $j->id_jadwal) }}"
@@ -808,6 +814,46 @@
     </div>
 </div>
 
+{{-- MODAL TUKAR PENUGASAN BARISTA --}}
+<div id="modal-swap-jadwal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200">
+        <div class="flex justify-between items-center pb-3 border-b mb-4">
+            <div>
+                <h4 class="text-base font-bold text-gray-800">Tukar Jadwal Barista</h4>
+                <p class="text-xs text-gray-500 mt-0.5">Penugasan kedua barista akan ditukar, tanpa menambah jadwal.</p>
+            </div>
+            <button type="button" onclick="closeSwapJadwalModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+        </div>
+
+        <form id="form-swap-jadwal" action="" method="POST">
+            @csrf
+            <input type="hidden" name="week_start" value="{{ $startOfWeek->format('Y-m-d') }}">
+            <input type="hidden" name="cabang_id" value="{{ $cabangId }}">
+
+            <label for="swap_id_jadwal_lawan" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                Tukar dengan penugasan
+            </label>
+            <select name="id_jadwal_lawan" id="swap_id_jadwal_lawan" required class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#2F593E]">
+                <option value="">-- Pilih jadwal barista lain --</option>
+                @foreach($jadwals as $candidate)
+                    <option value="{{ $candidate->id_jadwal }}" data-jadwal="{{ $candidate->id_jadwal }}">
+                        {{ $candidate->tanggal }} &bull; {{ $candidate->nama_barista }} &bull;
+                        {{ $candidate->nama_cabang }} - {{ $candidate->nama_shift }}
+                        ({{ substr((string) $candidate->jam_mulai, 0, 5) }}-{{ substr((string) $candidate->jam_selesai, 0, 5) }})
+                    </option>
+                @endforeach
+            </select>
+
+            <div class="mt-6 flex justify-end gap-2">
+                <button type="button" onclick="closeSwapJadwalModal()" class="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-100">Batal</button>
+                <button type="submit" class="px-5 py-2 bg-[#2F593E] hover:bg-green-800 text-white font-bold rounded-lg text-sm shadow-sm transition">
+                    Tukar Jadwal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- ========================================== --}}
 {{-- JAVASCRIPT LOGIC --}}
 {{-- ========================================== --}}
@@ -889,6 +935,21 @@
 
     function closeEditJadwalModal() {
         document.getElementById('modal-edit-jadwal').classList.add('hidden');
+    }
+
+    function openSwapJadwalModal(idJadwal) {
+        const form = document.getElementById('form-swap-jadwal');
+        const select = document.getElementById('swap_id_jadwal_lawan');
+        form.action = "{{ url('/jadwal-shift') }}/" + idJadwal + "/tukar";
+        select.value = '';
+        Array.from(select.options).forEach(option => {
+            option.disabled = option.dataset.jadwal === String(idJadwal);
+        });
+        document.getElementById('modal-swap-jadwal').classList.remove('hidden');
+    }
+
+    function closeSwapJadwalModal() {
+        document.getElementById('modal-swap-jadwal').classList.add('hidden');
     }
 </script>
 

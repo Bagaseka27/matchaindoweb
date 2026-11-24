@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 use App\Models\Cabang;
@@ -626,6 +627,116 @@ class CabangController extends Controller
         return redirect()
             ->route('shift.index', $redirectParams)
             ->with('success', 'Jadwal barista berhasil diperbarui');
+    }
+
+    public function swapJadwalShift(Request $request, $id)
+    {
+        $data = $request->validate([
+            'id_jadwal_lawan' => ['required', 'integer', Rule::notIn([$id])],
+            'week_start' => 'nullable|date_format:Y-m-d',
+            'cabang_id' => 'nullable',
+        ]);
+
+        $redirectParams = array_filter([
+            'week_start' => $request->week_start,
+            'cabang_id' => $request->cabang_id,
+        ]);
+
+        DB::transaction(function () use ($id, $data) {
+            $jadwals = DB::table('jadwal_shift')
+                ->whereIn('id_jadwal', [$id, $data['id_jadwal_lawan']])
+                ->orderBy('id_jadwal')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id_jadwal');
+
+            if ($jadwals->count() !== 2) {
+                abort(404);
+            }
+
+            $jadwal = $jadwals->get($id);
+            $jadwalLawan = $jadwals->get($data['id_jadwal_lawan']);
+
+            if ((string) $jadwal->id_user === (string) $jadwalLawan->id_user) {
+                throw ValidationException::withMessages([
+                    'id_jadwal_lawan' => 'Pilih jadwal milik barista yang berbeda.',
+                ]);
+            }
+
+            $digunakanPenggajian = DB::table('penggajian')
+                ->whereIn('id_jadwal', [$jadwal->id_jadwal, $jadwalLawan->id_jadwal])
+                ->exists();
+
+            if ($digunakanPenggajian) {
+                throw ValidationException::withMessages([
+                    'id_jadwal_lawan' => 'Jadwal yang sudah digunakan dalam penggajian tidak dapat ditukar.',
+                ]);
+            }
+
+            $shift = Shift::whereIn('id_shift', [$jadwal->id_shift, $jadwalLawan->id_shift])
+                ->get()
+                ->keyBy('id_shift');
+            $barista = User::whereIn('id_user', [$jadwal->id_user, $jadwalLawan->id_user])
+                ->get()
+                ->keyBy('id_user');
+
+            $baristaPertama = $barista->get($jadwal->id_user);
+            $baristaKedua = $barista->get($jadwalLawan->id_user);
+            $shiftPertama = $shift->get($jadwal->id_shift);
+            $shiftKedua = $shift->get($jadwalLawan->id_shift);
+
+            if (
+                !$baristaPertama ||
+                !$baristaKedua ||
+                !$shiftPertama ||
+                !$shiftKedua ||
+                $baristaPertama->role !== 'barista' ||
+                $baristaKedua->role !== 'barista' ||
+                !$baristaPertama->is_aktif ||
+                !$baristaKedua->is_aktif ||
+                (string) $baristaKedua->id_cabang !== (string) $shiftPertama->id_cabang ||
+                (string) $baristaPertama->id_cabang !== (string) $shiftKedua->id_cabang
+            ) {
+                throw ValidationException::withMessages([
+                    'id_jadwal_lawan' => 'Pertukaran hanya dapat dilakukan antarbarista aktif di cabang yang sama.',
+                ]);
+            }
+
+            $bentrokPertama = DB::table('jadwal_shift')
+                ->where('id_user', $jadwalLawan->id_user)
+                ->where('tanggal', $jadwal->tanggal)
+                ->whereNotIn('id_jadwal', [$jadwal->id_jadwal, $jadwalLawan->id_jadwal])
+                ->exists();
+            $bentrokKedua = DB::table('jadwal_shift')
+                ->where('id_user', $jadwal->id_user)
+                ->where('tanggal', $jadwalLawan->tanggal)
+                ->whereNotIn('id_jadwal', [$jadwal->id_jadwal, $jadwalLawan->id_jadwal])
+                ->exists();
+
+            if ($bentrokPertama || $bentrokKedua) {
+                throw ValidationException::withMessages([
+                    'id_jadwal_lawan' => 'Pertukaran menyebabkan barista memiliki lebih dari satu jadwal pada tanggal yang sama.',
+                ]);
+            }
+
+            DB::table('jadwal_shift')
+                ->where('id_jadwal', $jadwal->id_jadwal)
+                ->update([
+                    'id_user' => $jadwalLawan->id_user,
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('jadwal_shift')
+                ->where('id_jadwal', $jadwalLawan->id_jadwal)
+                ->update([
+                    'id_user' => $jadwal->id_user,
+                    'updated_at' => now(),
+                ]);
+        });
+
+        return redirect()
+            ->route('shift.index', $redirectParams)
+            ->with('success', 'Jadwal kedua barista berhasil ditukar tanpa menambah penugasan.');
     }
 
 
